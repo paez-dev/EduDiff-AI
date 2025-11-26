@@ -2,6 +2,7 @@ from diffusers import StableDiffusionPipeline
 import torch
 import gradio as gr
 
+# Modelo y dispositivo
 MODEL_ID = "runwayml/stable-diffusion-v1-5"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -9,11 +10,12 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 pipe = StableDiffusionPipeline.from_pretrained(
     MODEL_ID,
     torch_dtype=torch.float16 if device=="cuda" else torch.float32,
-    safety_checker=None,
+    safety_checker=None,  # desactiva safety checker si no necesitas filtrado
     device_map="auto" if device=="cuda" else None,
     low_cpu_mem_usage=True
 )
 
+# Función de generación de imágenes
 def generar(prompt, estilo, steps, scale):
     full_prompt = f"{prompt}, estilo: {estilo}, clean vector illustration, educational infographic, clear labels"
     
@@ -25,6 +27,7 @@ def generar(prompt, estilo, steps, scale):
         image = pipe(full_prompt, guidance_scale=float(scale), num_inference_steps=int(steps)).images[0]
     return image
 
+# Interfaz Gradio
 iface = gr.Interface(
     fn=generar,
     inputs=[
@@ -42,9 +45,9 @@ iface = gr.Interface(
     description="""
 Genera infografías, diagramas y esquemas educativos a partir de un prompt.  
 Ajusta 'Steps' y 'Guidance Scale' para controlar calidad y creatividad.
-""",
-    allow_flagging="never"
+"""
 )
 
+# Lanzamiento de la app
 if __name__ == "__main__":
-    iface.launch()
+    iface.launch(allow_flagging="never")
