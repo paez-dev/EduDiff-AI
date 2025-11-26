@@ -1,3 +1,14 @@
+---
+title: EduDiff EA3
+emoji: 🎓
+colorFrom: blue
+colorTo: purple
+sdk: gradio
+sdk_version: "3.45.0"
+app_file: app.py
+pinned: false
+---
+
 # EduDiff — Generador de Imágenes Educativas (EA3)
 
 Esta aplicación genera imágenes educativas (infografías, diagramas y esquemas) usando Stable Diffusion.
