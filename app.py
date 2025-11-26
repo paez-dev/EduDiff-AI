@@ -20,7 +20,7 @@ CONTROLNET_MODELS = {
     "Sketch": "xinsir/controlnet-sketch-sdxl-1.0",
 }
 
-controlnet_choices = list(CONTROLET_MODELS.keys())
+controlnet_choices = list(CONTROLNET_MODELS.keys())
 
 # Ajustes por defecto
 DEFAULT_STEPS = 25
@@ -153,7 +153,7 @@ def generar(prompt, estilo, steps, scale, tipo_controlnet, input_image):
             with torch.autocast("cuda"):
                 result = pipe(
                     prompt=final_prompt,
-                    image=img_for_control,
+                    control_image=img_for_control,
                     controlnet_conditioning_scale=1.0 if tipo_controlnet != "None" else 0.0,
                     num_inference_steps=steps,
                     guidance_scale=scale,
@@ -161,7 +161,7 @@ def generar(prompt, estilo, steps, scale, tipo_controlnet, input_image):
         else:
             result = pipe(
                 prompt=final_prompt,
-                image=img_for_control,
+                control_image=img_for_control,
                 controlnet_conditioning_scale=1.0 if tipo_controlnet != "None" else 0.0,
                 num_inference_steps=steps,
                 guidance_scale=scale,
@@ -183,10 +183,9 @@ def generar(prompt, estilo, steps, scale, tipo_controlnet, input_image):
 prompt_box = gr.Textbox(label="Prompt", lines=3)
 style_box = gr.Dropdown(list(STYLE_PROMPTS.keys()), value="Infografía", label="Estilo")
 steps_box = gr.Slider(5, 80, value=DEFAULT_STEPS, step=1, label="Num Steps")
-scale_box = gr.Slider(1.0, 20.0, value=DEFAULTGUIDANCE, step=0.1, label="Guidance Scale")
+scale_box = gr.Slider(1.0, 20.0, value=DEFAULT_GUIDANCE, step=0.1, label="Guidance Scale")
 controlnet_box = gr.Dropdown(controlnet_choices, value="None", label="ControlNet")
 image_input = gr.Image(type="pil", label="Imagen guía (opcional)")
-
 output_img = gr.Image(type="pil", label="Resultado")
 output_msg = gr.Markdown(label="Mensajes")
 
