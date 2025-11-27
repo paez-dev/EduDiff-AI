@@ -1,9 +1,3 @@
-torch
-diffusers
-transformers
-accelerate
-safetensors
-huggingface_hub
 gradio
+huggingface_hub
 Pillow
-numpy
