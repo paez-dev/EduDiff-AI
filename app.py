@@ -82,7 +82,7 @@ def generar_imagen(prompt: str, estilo: str, calidad: str) -> tuple:
 # INTERFAZ DE USUARIO
 # ═══════════════════════════════════════════════════════════════════════════════
 
-with gr.Blocks(title="EduDiff XL", theme=gr.themes.Soft()) as demo:
+with gr.Blocks() as demo:
     
     # Header
     gr.Markdown("""
