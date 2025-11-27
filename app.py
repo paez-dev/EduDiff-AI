@@ -3,16 +3,13 @@
 EduDiff XL — Generador de Material Educativo con IA Generativa
 ═══════════════════════════════════════════════════════════════════════════════
 Proyecto: EA3 - Generación de Contenido con IA Generativa
-Arquitectura: Modelos de Difusión (Stable Diffusion / FLUX)
+Arquitectura: Modelos de Difusión (FLUX.1)
 Dominio: Educación - Generación de infografías, diagramas y material didáctico
 ═══════════════════════════════════════════════════════════════════════════════
 """
 
 import gradio as gr
 from gradio_client import Client
-from PIL import Image
-import io
-import base64
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN
@@ -50,10 +47,6 @@ def generar_imagen(prompt: str, estilo: str, calidad: str) -> tuple:
     estilo_prompt = ESTILOS.get(estilo, ESTILOS["📊 Infografía Profesional"])
     prompt_completo = f"{prompt}, {estilo_prompt}, high quality, detailed"
     
-    # Configurar pasos según calidad
-    steps_map = {"⚡ Rápida": 20, "⭐ Estándar": 30, "💎 Alta": 40}
-    num_steps = steps_map.get(calidad, 30)
-    
     try:
         # Usar cliente de API pública de HuggingFace
         client = Client("black-forest-labs/FLUX.1-schnell")
@@ -72,7 +65,7 @@ def generar_imagen(prompt: str, estilo: str, calidad: str) -> tuple:
         if result and len(result) > 0:
             image_path = result[0]
             seed_used = result[1] if len(result) > 1 else "N/A"
-            return image_path, f"✅ Imagen generada exitosamente\n📌 Semilla: {seed_used}"
+            return image_path, f"✅ Imagen generada exitosamente | Semilla: {seed_used}"
         else:
             return None, "❌ No se pudo generar la imagen"
             
@@ -89,39 +82,14 @@ def generar_imagen(prompt: str, estilo: str, calidad: str) -> tuple:
 # INTERFAZ DE USUARIO
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# CSS personalizado
-css = """
-.gradio-container {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-}
-.main-title {
-    text-align: center;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #3d7ab5 100%);
-    padding: 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 1rem;
-}
-.main-title h1 {
-    color: white;
-    margin: 0;
-    font-size: 2rem;
-}
-.main-title p {
-    color: rgba(255,255,255,0.9);
-    margin: 0.5rem 0 0 0;
-}
-footer {visibility: hidden}
-"""
-
-# Crear interfaz
-with gr.Blocks(css=css, title="EduDiff XL", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="EduDiff XL", theme=gr.themes.Soft()) as demo:
     
     # Header
-    gr.HTML("""
-    <div class="main-title">
-        <h1>🎓 EduDiff XL</h1>
-        <p>Generador de Material Educativo con Inteligencia Artificial</p>
-    </div>
+    gr.Markdown("""
+    # 🎓 EduDiff XL
+    ### Generador de Material Educativo con Inteligencia Artificial
+    
+    Crea imágenes educativas de alta calidad usando modelos de difusión (FLUX.1).
     """)
     
     with gr.Row():
@@ -132,8 +100,7 @@ with gr.Blocks(css=css, title="EduDiff XL", theme=gr.themes.Soft()) as demo:
             prompt_input = gr.Textbox(
                 label="Descripción del contenido",
                 placeholder="Ej: Diagrama de célula vegetal mostrando cloroplastos, vacuola central, pared celular y núcleo con etiquetas claras",
-                lines=4,
-                max_lines=6
+                lines=4
             )
             
             estilo_input = gr.Dropdown(
@@ -170,8 +137,7 @@ with gr.Blocks(css=css, title="EduDiff XL", theme=gr.themes.Soft()) as demo:
             
             status_output = gr.Textbox(
                 label="Estado",
-                interactive=False,
-                lines=2
+                interactive=False
             )
     
     # Ejemplos
@@ -191,15 +157,9 @@ with gr.Blocks(css=css, title="EduDiff XL", theme=gr.themes.Soft()) as demo:
     # Footer
     gr.Markdown("""
     ---
-    <center>
-    
     **EduDiff XL** — Proyecto EA3: Generación de Contenido con IA Generativa
     
-    Modelo: FLUX.1-schnell | Framework: Gradio
-    
-    ⚠️ El contenido generado debe ser verificado antes de su uso educativo
-    
-    </center>
+    Modelo: FLUX.1-schnell | Framework: Gradio | ⚠️ Verificar contenido antes de uso educativo
     """)
     
     # Evento de generación
