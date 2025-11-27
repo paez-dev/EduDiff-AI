@@ -56,16 +56,18 @@ def generar_imagen(prompt: str, estilo: str, guidance_scale: float, num_steps: i
     actual_seed = seed if seed >= 0 else 0
     
     try:
-        # Usar FLUX.1-schnell via Space público de Black Forest Labs
-        client = Client("black-forest-labs/FLUX.1-schnell")
+        # Usar Stable Diffusion 3.5 via Space público de Stability AI
+        client = Client("stabilityai/stable-diffusion-3.5-large")
         
         result = client.predict(
             prompt=prompt_completo,
+            negative_prompt=NEGATIVE_PROMPT,
             seed=actual_seed,
             randomize_seed=use_random,
             width=1024,
             height=1024,
-            num_inference_steps=min(num_steps, 8),  # FLUX.1-schnell max 8 steps
+            guidance_scale=guidance_scale,
+            num_inference_steps=num_steps,
             api_name="/infer"
         )
         
@@ -102,7 +104,7 @@ with gr.Blocks() as demo:
     # 🎓 EduDiff XL
     ### Generador de Material Educativo con Inteligencia Artificial
     
-    Crea imágenes educativas de alta calidad usando **FLUX.1**.
+    Crea imágenes educativas de alta calidad usando **Stable Diffusion 3.5**.
     """)
     
     with gr.Row():
@@ -192,7 +194,7 @@ with gr.Blocks() as demo:
     ---
     **EduDiff XL** — Proyecto EA3: Generación de Contenido con IA Generativa
     
-    Modelo: FLUX.1-schnell | ⚠️ Verificar contenido antes de uso educativo
+    Modelo: Stable Diffusion 3.5 | ⚠️ Verificar contenido antes de uso educativo
     """)
     
     # Evento de generación
