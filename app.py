@@ -56,8 +56,8 @@ def generar_imagen(prompt: str, estilo: str, guidance_scale: float, num_steps: i
     actual_seed = seed if seed >= 0 else 0
     
     try:
-        # Usar SDXL via Space público
-        client = Client("KingNish/Realtime-SDXL")
+        # Usar Stable Diffusion 3.5 via Space público de Stabilityai
+        client = Client("stabilityai/stable-diffusion-3.5-large")
         
         result = client.predict(
             prompt=prompt_completo,
@@ -68,7 +68,7 @@ def generar_imagen(prompt: str, estilo: str, guidance_scale: float, num_steps: i
             height=1024,
             guidance_scale=guidance_scale,
             num_inference_steps=num_steps,
-            api_name="/generate_image"
+            api_name="/infer"
         )
         
         if result:
