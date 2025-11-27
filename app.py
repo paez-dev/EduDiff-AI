@@ -636,18 +636,18 @@ def create_interface():
 # PUNTO DE ENTRADA
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# PUNTO DE ENTRADA - Compatible con Hugging Face Spaces
+# ═══════════════════════════════════════════════════════════════════════════════
+
+print("=" * 60)
+print("🎓 EduDiff XL — Generador de Material Educativo")
+print("=" * 60)
+print(f"📍 Dispositivo: {_device.upper()}")
+print(f"🔧 PyTorch: {torch.__version__}")
+print("=" * 60)
+
+demo = create_interface()
+
 if __name__ == "__main__":
-    print("=" * 60)
-    print("🎓 EduDiff XL — Generador de Material Educativo")
-    print("=" * 60)
-    print(f"📍 Dispositivo: {_device.upper()}")
-    print(f"🔧 PyTorch: {torch.__version__}")
-    print("=" * 60)
-    
-    demo = create_interface()
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=False,
-        show_error=True
-    )
+    demo.launch()
