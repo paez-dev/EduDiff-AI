@@ -1,2 +1,3 @@
-Pillow
-requests
+gradio>=4.0.0
+gradio_client>=0.10.0
+Pillow>=10.0.0
