@@ -1,24 +1,9 @@
-# EduDiff XL - Dependencias para Hugging Face Spaces
-# Python 3.10+
-
-# Core ML
-torch>=2.0.0
-torchvision>=0.15.0
-
-# Diffusion Models
-diffusers>=0.27.0
-transformers>=4.40.0
-accelerate>=0.25.0
-safetensors>=0.4.0
-
-# Hugging Face
-huggingface_hub>=0.20.0
-
-# Interface - Versión compatible con HF Spaces
-gradio==4.44.0
-
-# Image Processing
-Pillow>=10.0.0
-
-# Utilities
-numpy>=1.24.0
+torch
+diffusers
+transformers
+accelerate
+safetensors
+huggingface_hub
+gradio
+Pillow
+numpy
