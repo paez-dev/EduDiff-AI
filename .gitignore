@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Modelo cache (muy grande)
+.cache/
+*.bin
+*.safetensors
+
+# Resultados locales (opcional)
+# results/experiments/
+# results/portfolio/
+
+# Logs
+*.log
+
