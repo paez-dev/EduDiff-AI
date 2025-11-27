@@ -1,52 +1,41 @@
-# EduDiff — Generador de Material Educativo con IA
-# Versión mínima para Hugging Face Spaces
-
+# EduDiff — Generador Educativo con IA
 import gradio as gr
-from huggingface_hub import InferenceClient
+import requests
+import io
 from PIL import Image
 
-# Cliente de inferencia
-client = InferenceClient()
+API_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-dev"
 
-def generate(prompt, style):
+def generate(prompt):
     """Genera imagen educativa."""
-    if not prompt:
+    if not prompt or not prompt.strip():
         return None
     
-    styles = {
-        "Infografía": "infographic, clean design, educational, white background",
-        "Ilustración": "illustration, colorful, child-friendly, educational",
-        "Científico": "scientific diagram, detailed, textbook style, labeled",
-        "Diagrama": "diagram, flowchart, organized, schematic"
-    }
-    
-    full_prompt = f"{prompt}, {styles.get(style, styles['Infografía'])}, high quality"
+    full_prompt = f"{prompt}, educational infographic, clean design, professional, high quality"
     
     try:
-        image = client.text_to_image(
-            prompt=full_prompt,
-            model="stabilityai/stable-diffusion-xl-base-1.0"
+        response = requests.post(
+            API_URL,
+            json={"inputs": full_prompt},
+            timeout=120
         )
-        return image
+        if response.status_code == 200:
+            image = Image.open(io.BytesIO(response.content))
+            return image
+        else:
+            print(f"Error: {response.status_code}")
+            return None
     except Exception as e:
         print(f"Error: {e}")
         return None
 
-# Interfaz simple
 demo = gr.Interface(
     fn=generate,
-    inputs=[
-        gr.Textbox(label="Descripción", placeholder="Ej: Célula vegetal con núcleo y cloroplastos", lines=2),
-        gr.Dropdown(["Infografía", "Ilustración", "Científico", "Diagrama"], value="Infografía", label="Estilo")
-    ],
+    inputs=gr.Textbox(label="Descripción", placeholder="Ej: Célula vegetal con núcleo y cloroplastos"),
     outputs=gr.Image(label="Resultado"),
     title="🎓 EduDiff - Generador Educativo",
-    description="Genera imágenes educativas con IA. Escribe una descripción y selecciona un estilo.",
-    examples=[
-        ["Diagrama de célula animal con núcleo y mitocondrias", "Científico"],
-        ["Ciclo del agua con evaporación y precipitación", "Infografía"],
-        ["Sistema solar con planetas", "Ilustración"],
-    ],
+    description="Genera imágenes educativas con IA (FLUX). Escribe una descripción del contenido.",
+    cache_examples=False,
     allow_flagging="never"
 )
 
