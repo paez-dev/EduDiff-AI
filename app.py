@@ -75,11 +75,12 @@ def generar_imagen(prompt: str, estilo: str, guidance_scale: float, num_steps: i
         }
         
         payload = {
-            "model": "black-forest-labs/FLUX.1-schnell-Free",
+            "model": "stabilityai/stable-diffusion-xl-base-1.0",
             "prompt": prompt_completo,
+            "negative_prompt": NEGATIVE_PROMPT,
             "width": 1024,
             "height": 1024,
-            "steps": min(num_steps, 4),  # FLUX.1-schnell-Free max 4 steps
+            "steps": num_steps,
             "n": 1,
             "response_format": "b64_json"
         }
@@ -134,7 +135,7 @@ with gr.Blocks() as demo:
     # 🎓 EduDiff XL
     ### Generador de Material Educativo con Inteligencia Artificial
     
-    Crea imágenes educativas de alta calidad usando **FLUX.1** via Together AI.
+    Crea imágenes educativas de alta calidad usando **Stable Diffusion XL** via Together AI.
     """)
     
     with gr.Row():
@@ -166,12 +167,12 @@ with gr.Blocks() as demo:
             )
             
             steps_input = gr.Slider(
-                minimum=1,
-                maximum=4,
-                value=4,
-                step=1,
+                minimum=10,
+                maximum=50,
+                value=25,
+                step=5,
                 label="Inference Steps (calidad)",
-                info="FLUX.1 Free: máximo 4 pasos"
+                info="Más pasos = mejor calidad pero más lento"
             )
             
             seed_input = gr.Number(
@@ -186,7 +187,7 @@ with gr.Blocks() as demo:
             ---
             ### 💡 Consejos
             - **Guidance 7-9**: Balance óptimo para contenido educativo
-            - **Steps 4**: Máxima calidad en FLUX.1 Free
+            - **Steps 25-35**: Buena calidad sin esperar mucho
             - Guarda el **seed** para reproducir resultados
             """)
         
@@ -209,11 +210,11 @@ with gr.Blocks() as demo:
     gr.Markdown("### 📚 Ejemplos de uso")
     gr.Examples(
         examples=[
-            ["Diagrama de célula animal con núcleo, mitocondrias, ribosomas y membrana celular etiquetados", "🔬 Científico Detallado", 7.5, 4, -1],
-            ["Ciclo del agua mostrando evaporación, condensación, precipitación con flechas y etiquetas", "📊 Infografía Profesional", 8.0, 4, -1],
-            ["Sistema solar con los 8 planetas en orden, con nombres y tamaños relativos", "🎨 Ilustración Didáctica", 7.0, 4, -1],
-            ["Pirámide alimenticia con grupos de alimentos y porciones recomendadas", "📊 Infografía Profesional", 7.5, 4, -1],
-            ["Anatomía del corazón humano con aurículas, ventrículos y válvulas etiquetados", "🔬 Científico Detallado", 8.5, 4, -1],
+            ["Diagrama de célula animal con núcleo, mitocondrias, ribosomas y membrana celular etiquetados", "🔬 Científico Detallado", 7.5, 30, -1],
+            ["Ciclo del agua mostrando evaporación, condensación, precipitación con flechas y etiquetas", "📊 Infografía Profesional", 8.0, 25, -1],
+            ["Sistema solar con los 8 planetas en orden, con nombres y tamaños relativos", "🎨 Ilustración Didáctica", 7.0, 25, -1],
+            ["Pirámide alimenticia con grupos de alimentos y porciones recomendadas", "📊 Infografía Profesional", 7.5, 25, -1],
+            ["Anatomía del corazón humano con aurículas, ventrículos y válvulas etiquetados", "🔬 Científico Detallado", 8.5, 35, -1],
         ],
         inputs=[prompt_input, estilo_input, guidance_input, steps_input, seed_input],
         cache_examples=False
@@ -224,7 +225,7 @@ with gr.Blocks() as demo:
     ---
     **EduDiff XL** — Proyecto EA3: Generación de Contenido con IA Generativa
     
-    Modelo: FLUX.1 via Together AI | ⚠️ Verificar contenido antes de uso educativo
+    Modelo: Stable Diffusion XL via Together AI | ⚠️ Verificar contenido antes de uso educativo
     """)
     
     # Evento de generación
