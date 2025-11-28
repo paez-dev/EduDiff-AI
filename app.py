@@ -9,7 +9,7 @@ Dominio: Educación - Generación de infografías, diagramas y material didácti
 """
 
 import gradio as gr
-import requests
+from together import Together
 import os
 import base64
 from io import BytesIO
@@ -20,9 +20,6 @@ import tempfile
 # CONFIGURACIÓN
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# API Key de Together AI (configurar en HF Spaces como Secret)
-TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY", "")
-
 ESTILOS = {
     "📊 Infografía Profesional": "professional infographic, clean vector design, labeled diagram, white background, high contrast, modern educational material, sharp details",
     "🎨 Ilustración Didáctica": "digital educational illustration, vibrant colors, child-friendly, engaging visual, cartoon style, clear shapes",
@@ -31,8 +28,6 @@ ESTILOS = {
     "✏️ Dibujo Escolar": "hand-drawn sketch, simple shapes, colorful crayons, classroom style, easy to understand, friendly",
     "🌈 Mapa Conceptual": "concept map, connected ideas, colorful nodes, mind map style, organized layout, arrows and connections"
 }
-
-NEGATIVE_PROMPT = "blurry, bad quality, distorted, ugly, bad anatomy, bad hands, missing fingers, extra digits, fewer digits, cropped, worst quality, low quality, text errors, watermark, signature"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FUNCIÓN DE GENERACIÓN CON TOGETHER AI
@@ -55,74 +50,67 @@ def generar_imagen(prompt: str, estilo: str, guidance_scale: float, num_steps: i
     if not prompt or not prompt.strip():
         return None, "⚠️ Por favor, ingresa una descripción del contenido educativo."
     
-    if not TOGETHER_API_KEY:
+    # Verificar API Key
+    api_key = os.environ.get("TOGETHER_API_KEY", "")
+    if not api_key:
         return None, "❌ Error: API Key de Together AI no configurada. Añade TOGETHER_API_KEY en los Secrets del Space."
     
     # Construir prompt completo
     estilo_prompt = ESTILOS.get(estilo, ESTILOS["📊 Infografía Profesional"])
     prompt_completo = f"{prompt}, {estilo_prompt}, masterpiece, best quality, highly detailed"
     
-    # Semilla
-    actual_seed = seed if seed >= 0 else None
-    
     try:
-        # Llamar API de Together AI
-        url = "https://api.together.xyz/v1/images/generations"
+        # Crear cliente de Together AI
+        client = Together(api_key=api_key)
         
-        headers = {
-            "Authorization": f"Bearer {TOGETHER_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        # Generar imagen con SDXL
+        response = client.images.generate(
+            prompt=prompt_completo,
+            model="stabilityai/stable-diffusion-xl-base-1.0",
+            steps=num_steps,
+            n=1,
+            width=1024,
+            height=1024
+        )
         
-        payload = {
-            "model": "stabilityai/stable-diffusion-xl-base-1.0",
-            "prompt": prompt_completo,
-            "negative_prompt": NEGATIVE_PROMPT,
-            "width": 1024,
-            "height": 1024,
-            "steps": num_steps,
-            "n": 1,
-            "response_format": "b64_json"
-        }
-        
-        if actual_seed is not None:
-            payload["seed"] = actual_seed
-        
-        response = requests.post(url, headers=headers, json=payload, timeout=120)
-        
-        if response.status_code == 200:
-            result = response.json()
+        if response.data and len(response.data) > 0:
+            # Obtener imagen en base64
+            img_b64 = response.data[0].b64_json
             
-            if "data" in result and len(result["data"]) > 0:
-                # Decodificar imagen base64
-                img_b64 = result["data"][0]["b64_json"]
+            if img_b64:
+                # Decodificar y guardar
                 img_data = base64.b64decode(img_b64)
                 img = Image.open(BytesIO(img_data))
                 
-                # Guardar temporalmente
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
                 img.save(temp_file.name)
                 
-                used_seed = result["data"][0].get("seed", actual_seed or "aleatorio")
-                
-                return temp_file.name, f"✅ Generado con Together AI | Seed: {used_seed}"
+                return temp_file.name, f"✅ Generado con SDXL | Steps: {num_steps} | Guidance: {guidance_scale}"
             else:
-                return None, "❌ No se recibió imagen en la respuesta"
+                # Si hay URL en lugar de base64
+                img_url = response.data[0].url
+                if img_url:
+                    import requests
+                    img_response = requests.get(img_url)
+                    img = Image.open(BytesIO(img_response.content))
+                    
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+                    img.save(temp_file.name)
+                    
+                    return temp_file.name, f"✅ Generado con SDXL | Steps: {num_steps}"
         
-        elif response.status_code == 401:
-            return None, "❌ API Key inválida. Verifica tu TOGETHER_API_KEY."
-        
-        elif response.status_code == 429:
-            return None, "⏳ Límite de API alcanzado. Espera unos segundos."
-        
-        else:
-            error_detail = response.json().get("error", {}).get("message", response.text[:200])
-            return None, f"❌ Error {response.status_code}: {error_detail}"
+        return None, "❌ No se recibió imagen en la respuesta"
             
-    except requests.exceptions.Timeout:
-        return None, "⏳ Timeout. El servidor tardó mucho. Intenta de nuevo."
     except Exception as e:
-        return None, f"❌ Error: {str(e)[:200]}"
+        error_msg = str(e)
+        if "401" in error_msg or "unauthorized" in error_msg.lower():
+            return None, "❌ API Key inválida. Verifica tu TOGETHER_API_KEY."
+        elif "429" in error_msg or "rate" in error_msg.lower():
+            return None, "⏳ Límite de API alcanzado. Espera unos segundos."
+        elif "insufficient" in error_msg.lower() or "balance" in error_msg.lower():
+            return None, "💰 Créditos agotados en Together AI."
+        else:
+            return None, f"❌ Error: {error_msg[:200]}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # INTERFAZ DE USUARIO
