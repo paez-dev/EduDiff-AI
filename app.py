@@ -3,17 +3,25 @@
 EduDiff XL — Generador de Material Educativo con IA Generativa
 ═══════════════════════════════════════════════════════════════════════════════
 Proyecto: EA3 - Generación de Contenido con IA Generativa
-Arquitectura: Modelos de Difusión (Stable Diffusion XL)
+Arquitectura: Modelos de Difusión (Stable Diffusion XL via Together AI)
 Dominio: Educación - Generación de infografías, diagramas y material didáctico
 ═══════════════════════════════════════════════════════════════════════════════
 """
 
 import gradio as gr
-from gradio_client import Client
+import requests
+import os
+import base64
+from io import BytesIO
+from PIL import Image
+import tempfile
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN
 # ═══════════════════════════════════════════════════════════════════════════════
+
+# API Key de Together AI (configurar en HF Spaces como Secret)
+TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY", "")
 
 ESTILOS = {
     "📊 Infografía Profesional": "professional infographic, clean vector design, labeled diagram, white background, high contrast, modern educational material, sharp details",
@@ -27,12 +35,12 @@ ESTILOS = {
 NEGATIVE_PROMPT = "blurry, bad quality, distorted, ugly, bad anatomy, bad hands, missing fingers, extra digits, fewer digits, cropped, worst quality, low quality, text errors, watermark, signature"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# FUNCIÓN DE GENERACIÓN
+# FUNCIÓN DE GENERACIÓN CON TOGETHER AI
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def generar_imagen(prompt: str, estilo: str, guidance_scale: float, num_steps: int, seed: int) -> tuple:
     """
-    Genera una imagen educativa usando Stable Diffusion XL.
+    Genera una imagen educativa usando Stable Diffusion XL via Together AI.
     
     Args:
         prompt: Descripción del contenido educativo
@@ -47,51 +55,73 @@ def generar_imagen(prompt: str, estilo: str, guidance_scale: float, num_steps: i
     if not prompt or not prompt.strip():
         return None, "⚠️ Por favor, ingresa una descripción del contenido educativo."
     
+    if not TOGETHER_API_KEY:
+        return None, "❌ Error: API Key de Together AI no configurada. Añade TOGETHER_API_KEY en los Secrets del Space."
+    
     # Construir prompt completo
     estilo_prompt = ESTILOS.get(estilo, ESTILOS["📊 Infografía Profesional"])
     prompt_completo = f"{prompt}, {estilo_prompt}, masterpiece, best quality, highly detailed"
     
     # Semilla
-    use_random = seed == -1
-    actual_seed = seed if seed >= 0 else 0
+    actual_seed = seed if seed >= 0 else None
     
     try:
-        # Usar Stable Diffusion 3.5 via Space público de Stability AI
-        client = Client("stabilityai/stable-diffusion-3.5-large")
+        # Llamar API de Together AI
+        url = "https://api.together.xyz/v1/images/generations"
         
-        result = client.predict(
-            prompt=prompt_completo,
-            negative_prompt=NEGATIVE_PROMPT,
-            seed=actual_seed,
-            randomize_seed=use_random,
-            width=1024,
-            height=1024,
-            guidance_scale=guidance_scale,
-            num_inference_steps=num_steps,
-            api_name="/infer"
-        )
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_API_KEY}",
+            "Content-Type": "application/json"
+        }
         
-        if result:
-            # El resultado puede ser una imagen o tupla
-            if isinstance(result, tuple):
-                image_path = result[0]
-                used_seed = result[1] if len(result) > 1 else actual_seed
+        payload = {
+            "model": "black-forest-labs/FLUX.1-schnell-Free",
+            "prompt": prompt_completo,
+            "width": 1024,
+            "height": 1024,
+            "steps": min(num_steps, 4),  # FLUX.1-schnell-Free max 4 steps
+            "n": 1,
+            "response_format": "b64_json"
+        }
+        
+        if actual_seed is not None:
+            payload["seed"] = actual_seed
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
+        
+        if response.status_code == 200:
+            result = response.json()
+            
+            if "data" in result and len(result["data"]) > 0:
+                # Decodificar imagen base64
+                img_b64 = result["data"][0]["b64_json"]
+                img_data = base64.b64decode(img_b64)
+                img = Image.open(BytesIO(img_data))
+                
+                # Guardar temporalmente
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+                img.save(temp_file.name)
+                
+                used_seed = result["data"][0].get("seed", actual_seed or "aleatorio")
+                
+                return temp_file.name, f"✅ Generado con Together AI | Seed: {used_seed}"
             else:
-                image_path = result
-                used_seed = actual_seed
-            
-            return image_path, f"✅ Generado | Guidance: {guidance_scale} | Steps: {num_steps} | Seed: {used_seed}"
+                return None, "❌ No se recibió imagen en la respuesta"
+        
+        elif response.status_code == 401:
+            return None, "❌ API Key inválida. Verifica tu TOGETHER_API_KEY."
+        
+        elif response.status_code == 429:
+            return None, "⏳ Límite de API alcanzado. Espera unos segundos."
+        
         else:
-            return None, "❌ No se pudo generar la imagen"
+            error_detail = response.json().get("error", {}).get("message", response.text[:200])
+            return None, f"❌ Error {response.status_code}: {error_detail}"
             
+    except requests.exceptions.Timeout:
+        return None, "⏳ Timeout. El servidor tardó mucho. Intenta de nuevo."
     except Exception as e:
-        error_msg = str(e)
-        if "exceeded" in error_msg.lower() or "limit" in error_msg.lower() or "queue" in error_msg.lower():
-            return None, "⏳ Servidor ocupado. Espera unos segundos e intenta de nuevo."
-        elif "loading" in error_msg.lower():
-            return None, "🔄 El modelo se está cargando. Espera 30-60 segundos e intenta de nuevo."
-        else:
-            return None, f"❌ Error: {error_msg[:200]}"
+        return None, f"❌ Error: {str(e)[:200]}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # INTERFAZ DE USUARIO
@@ -104,7 +134,7 @@ with gr.Blocks() as demo:
     # 🎓 EduDiff XL
     ### Generador de Material Educativo con Inteligencia Artificial
     
-    Crea imágenes educativas de alta calidad usando **Stable Diffusion 3.5**.
+    Crea imágenes educativas de alta calidad usando **FLUX.1** via Together AI.
     """)
     
     with gr.Row():
@@ -136,12 +166,12 @@ with gr.Blocks() as demo:
             )
             
             steps_input = gr.Slider(
-                minimum=10,
-                maximum=50,
-                value=25,
-                step=5,
+                minimum=1,
+                maximum=4,
+                value=4,
+                step=1,
                 label="Inference Steps (calidad)",
-                info="Más pasos = mejor calidad pero más lento"
+                info="FLUX.1 Free: máximo 4 pasos"
             )
             
             seed_input = gr.Number(
@@ -156,7 +186,7 @@ with gr.Blocks() as demo:
             ---
             ### 💡 Consejos
             - **Guidance 7-9**: Balance óptimo para contenido educativo
-            - **Steps 25-35**: Buena calidad sin esperar mucho
+            - **Steps 4**: Máxima calidad en FLUX.1 Free
             - Guarda el **seed** para reproducir resultados
             """)
         
@@ -179,11 +209,11 @@ with gr.Blocks() as demo:
     gr.Markdown("### 📚 Ejemplos de uso")
     gr.Examples(
         examples=[
-            ["Diagrama de célula animal con núcleo, mitocondrias, ribosomas y membrana celular etiquetados", "🔬 Científico Detallado", 7.5, 30, -1],
-            ["Ciclo del agua mostrando evaporación, condensación, precipitación con flechas y etiquetas", "📊 Infografía Profesional", 8.0, 25, -1],
-            ["Sistema solar con los 8 planetas en orden, con nombres y tamaños relativos", "🎨 Ilustración Didáctica", 7.0, 25, -1],
-            ["Pirámide alimenticia con grupos de alimentos y porciones recomendadas", "📊 Infografía Profesional", 7.5, 25, -1],
-            ["Anatomía del corazón humano con aurículas, ventrículos y válvulas etiquetados", "🔬 Científico Detallado", 8.5, 35, -1],
+            ["Diagrama de célula animal con núcleo, mitocondrias, ribosomas y membrana celular etiquetados", "🔬 Científico Detallado", 7.5, 4, -1],
+            ["Ciclo del agua mostrando evaporación, condensación, precipitación con flechas y etiquetas", "📊 Infografía Profesional", 8.0, 4, -1],
+            ["Sistema solar con los 8 planetas en orden, con nombres y tamaños relativos", "🎨 Ilustración Didáctica", 7.0, 4, -1],
+            ["Pirámide alimenticia con grupos de alimentos y porciones recomendadas", "📊 Infografía Profesional", 7.5, 4, -1],
+            ["Anatomía del corazón humano con aurículas, ventrículos y válvulas etiquetados", "🔬 Científico Detallado", 8.5, 4, -1],
         ],
         inputs=[prompt_input, estilo_input, guidance_input, steps_input, seed_input],
         cache_examples=False
@@ -194,7 +224,7 @@ with gr.Blocks() as demo:
     ---
     **EduDiff XL** — Proyecto EA3: Generación de Contenido con IA Generativa
     
-    Modelo: Stable Diffusion 3.5 | ⚠️ Verificar contenido antes de uso educativo
+    Modelo: FLUX.1 via Together AI | ⚠️ Verificar contenido antes de uso educativo
     """)
     
     # Evento de generación
