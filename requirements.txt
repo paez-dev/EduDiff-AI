@@ -1,9 +1,4 @@
-torch
-diffusers>=0.35.1
-transformers>=4.40.0
-huggingface_hub>=0.25.0
-accelerate
 gradio>=4.44.1
-safetensors
-sentencepiece
-opencv-python
+Pillow
+together
+requests
