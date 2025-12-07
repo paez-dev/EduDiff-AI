@@ -121,11 +121,12 @@ EduDiff-AI/
 │   └── EA3_EduDiff_Notebook.ipynb  # Notebook completo
 ├── src/
 │   └── utils.py          # Utilidades
-├── data/                 # Datos de ejemplo
 └── results/
     ├── experiments/      # Resultados de experimentos
     ├── metrics/         # Métricas de evaluación
     └── portfolio/       # Ejemplos generados
+    └── experiments.md       # Explicación de lo que se hizo
+
 ```
 
 ### Tecnologías Utilizadas
